@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "849801162438",
+    "project_id": "tabletalk-930ad",
+    "storage_bucket": "tabletalk-930ad.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:849801162438:android:b59cd573a661a9fc68f1c7",
+        "android_client_info": {
+          "package_name": "com.example.tabletalk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_B54E5gZ2xFQ_LOPjUkUVgpZLRel_zVs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
