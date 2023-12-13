@@ -6,5 +6,5 @@ data class TrendingFoodItemModel(
     val restaurantId:String? = null,
     val foodImageUrl:String? = null,
     val restaurantImageUrl:String? = null,
-    val foodRating:String? = null,
+    val foodRating:String? = null
 )

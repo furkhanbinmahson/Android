@@ -1,18 +1,20 @@
 package com.example.tabletalk.presentation.profile
 
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -30,28 +32,33 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.example.tabletalk.R
 import com.example.tabletalk.MyViewModel
-import com.example.tabletalk.presentation.login.Login
+import com.example.tabletalk.R
 import com.example.tabletalk.presentation.util.CommonCompose.OpaqueLoaderScreen
+import com.example.tabletalk.presentation.util.CommonCompose.SuggestionChipEachRow
 import com.example.tabletalk.presentation.util.Screen
-import com.example.tabletalk.ui.theme.Purple80
-import com.example.tabletalk.ui.theme.PurpleGrey40
-import okhttp3.internal.toImmutableList
+import java.io.File
+import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(navController: NavController, viewModel: MyViewModel) {
-
 
     LaunchedEffect(Unit ) {
         viewModel.getProfileDetails()
 
     }
     val profileDetails = viewModel.profileDetails
+
+    val showCameraOrGalleryDialog = remember {
+        mutableStateOf(false)
+    }
 
     var name by remember { mutableStateOf(profileDetails.value?.name ?: "") }
     var photoUri: Uri? by remember {
@@ -79,11 +86,40 @@ fun ProfileScreen(navController: NavController, viewModel: MyViewModel) {
         }
     }
 
+    val context = LocalContext.current
+
 
     val scrollState = rememberScrollState()
 
     val isPhotoChanged = remember {
         mutableStateOf(false)
+    }
+
+    val file = createImageFile(context)
+    val imageUri = FileProvider.getUriForFile(
+        context,
+        context.packageName+".provider",
+        file
+    )
+
+
+
+    val cameraLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) {
+            if(it) {
+                isPhotoChanged.value = true
+                photoUri = imageUri
+            }
+        }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        if(it) {
+            Toast.makeText(context,"Permission Granted",Toast.LENGTH_LONG).show()
+            cameraLauncher.launch(imageUri)
+        } else {
+            Toast.makeText(context,"Permission Denied",Toast.LENGTH_LONG).show()
+
+        }
     }
 
 
@@ -93,9 +129,50 @@ fun ProfileScreen(navController: NavController, viewModel: MyViewModel) {
             isPhotoChanged.value = true
         }
 
-    val context = LocalContext.current
+
+    if(showCameraOrGalleryDialog.value) {
+        Dialog(onDismissRequest = { showCameraOrGalleryDialog.value = false }) {
+            Row(modifier = Modifier.background(color = Color.LightGray).padding(32.dp)){
+                Column(modifier = Modifier.padding(8.dp).align(alignment = Alignment.CenterVertically).clickable {
+
+                    val permissionCheck = ContextCompat.checkSelfPermission(context,android.Manifest.permission.CAMERA)
+
+                    if(permissionCheck == PackageManager.PERMISSION_GRANTED) {
+                        cameraLauncher.launch(imageUri)
+                        showCameraOrGalleryDialog.value = false
+                    } else {
+                        permissionLauncher.launch(android.Manifest.permission.CAMERA)
+                    }
+
+                }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(painter = painterResource(id = R.drawable.camera), contentDescription = "Camera" )
+                    Text(text = "Camera")
+                }
+
+                Column(Modifier.padding(8.dp).align(alignment = Alignment.CenterVertically).clickable {
+                    launcher.launch(
+                        PickVisualMediaRequest(
+                            mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
+                        )
+                    )
+                    showCameraOrGalleryDialog.value = false
+
+                }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(painter = painterResource(id = R.drawable.gallery), contentDescription = "Camera" )
+                    Text(text = "Gallery")
+                }
+            }
+        }
+    }
+
+
+
 
     OpaqueLoaderScreen(disableInteraction = viewModel.shouldShowLoader.value) {
+
+
+
+
         Column(
             modifier = Modifier
                 .padding(16.dp)
@@ -114,11 +191,7 @@ fun ProfileScreen(navController: NavController, viewModel: MyViewModel) {
                     .clip(CircleShape)
                     .border(2.dp, Color.Black, CircleShape)
                     .clickable {
-                        launcher.launch(
-                            PickVisualMediaRequest(
-                                mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
+                        showCameraOrGalleryDialog.value = true
                     }
             )
 
@@ -229,29 +302,12 @@ fun ProfileScreen(navController: NavController, viewModel: MyViewModel) {
 
 }
 
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SuggestionChipEachRow(
-    chip: String,
-    selected: Boolean,
-    onChipState: (String) -> Unit
-) {
-
-    SuggestionChip(onClick = {
-        onChipState(chip)
-    }, label = {
-        Text(text = chip)
-    },
-        border = SuggestionChipDefaults.suggestionChipBorder(
-            borderWidth = 1.dp,
-            borderColor = if (selected) Color.Transparent else PurpleGrey40
-        ),
-        modifier = Modifier.padding(horizontal = 2.dp),
-        colors = SuggestionChipDefaults.suggestionChipColors(
-            containerColor = if (selected) Purple80 else Color.Transparent
-        ),
-        shape = RoundedCornerShape(16.dp)
+fun createImageFile(context: Context): File {
+    // Create an image file name
+    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss").format(java.util.Date())
+    return File.createTempFile(
+        "JPEG_${timeStamp}_", //prefix
+        ".jpg", //suffix
+        context.externalCacheDir //directory
     )
-
 }

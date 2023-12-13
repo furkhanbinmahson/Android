@@ -84,6 +84,8 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
+    implementation ("com.google.accompanist:accompanist-permissions:0.21.1-beta")
+    implementation("io.coil-kt:coil-compose:1.4.0")
 
 
 }

@@ -1,11 +1,14 @@
 package com.example.tabletalk
 
 import android.os.Bundle
+import android.os.StrictMode
+import android.transition.Scene
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,9 +39,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.tabletalk.presentation.chat.ChatScreen
 import com.example.tabletalk.presentation.home.Home
 import com.example.tabletalk.presentation.login.LoginScreen
+import com.example.tabletalk.presentation.newrequest.NewRequest
+import com.example.tabletalk.presentation.oldRequests.OldRequestScreen
 import com.example.tabletalk.presentation.profile.ProfileScreen
+import com.example.tabletalk.presentation.requests.RequestsScreen
+import com.example.tabletalk.presentation.restaurants.RestaurantsScreen
 import com.example.tabletalk.presentation.splash.Splash
 import com.example.tabletalk.presentation.util.Screen
 import com.example.tabletalk.ui.theme.TableTalkTheme
@@ -49,12 +57,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+
+        val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
+        StrictMode.setThreadPolicy(policy)
 
         setContent {
 
-            TableTalkTheme {
-                // A surface container using the 'background' color from the theme
+
+            TableTalkTheme(darkTheme = false) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -66,22 +76,33 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     var showBottomBar by remember { mutableStateOf(true) }
                     var showTopBar by remember { mutableStateOf(true) }
+                    var shouldShowPast by remember { mutableStateOf(false) }
+                    var shouldShowBack by remember { mutableStateOf(false) }
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
+
+
+                    shouldShowPast = when (navBackStackEntry?.destination?.route) {
+                        Screen.ProfileScreen.route -> true
+                        else -> false
+                    }
+
+
+                    shouldShowBack = when (navBackStackEntry?.destination?.route) {
+                        Screen.OldRequestScreen.route,Screen.ChatScreen.route -> true
+                        else -> false
+                    }
 
 
                     showBottomBar = when (navBackStackEntry?.destination?.route) {
                         Screen.SplashScreen.route,
-                        Screen.LoginScreen.route -> false
-
+                        Screen.LoginScreen.route,Screen.OldRequestScreen.route -> false
                         else -> true
                     }
 
                     showTopBar = when (navBackStackEntry?.destination?.route) {
                         Screen.SplashScreen.route,
-                        Screen.LoginScreen.route -> false
-
+                        Screen.LoginScreen.route,Screen.ChatScreen.route -> false
                         else -> true
-
                     }
 
                     Scaffold(
@@ -96,9 +117,49 @@ class MainActivity : ComponentActivity() {
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 16.sp
                                         )
-                                    }
-                                )
+                                    },
+                                    actions = {
+                                        if (shouldShowPast) {
+                                            Text(
+                                                "Past Events",
+                                                color = colorResource(id = R.color.black),
+                                                fontFamily = FontFamily.Serif,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp,
+                                                modifier = Modifier.clickable {
+                                                    navController.navigate(Screen.OldRequestScreen.route)
+                                                }
+                                            )
+                                        } else {
+                                            Text(
+                                                "Chat",
+                                                color = colorResource(id = R.color.black),
+                                                fontFamily = FontFamily.Serif,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp,
+                                                modifier = Modifier.clickable {
+                                                    navController.navigate(Screen.ChatScreen.route)
+                                                }
+                                            )
+                                        }
+
+                                    },
+                                    navigationIcon = {
+                                        if(shouldShowBack) {
+                                            Image(painter = painterResource(id = R.drawable.baseline_arrow_back_ios_24),
+                                                contentDescription = "Back",
+                                                modifier = Modifier.clickable {
+                                                    navController.navigate(Screen.HomeScreen.route) {
+                                                        popUpTo(Screen.NewMyRequestScreen.route) {
+                                                            inclusive = true
+                                                        }
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    })
                             }
+
                         },
                         bottomBar = {
                             if (showBottomBar) {
@@ -106,7 +167,6 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     ) {
-
 
                         NavHost(
                             modifier = Modifier.padding(
@@ -122,40 +182,42 @@ class MainActivity : ComponentActivity() {
                         )
                         {
                             composable(route = Screen.HomeScreen.route) {
-                                Home(navController,viewModel)
+                                Home(navController, viewModel)
                             }
                             composable(route = Screen.ProfileScreen.route) {
-                                ProfileScreen(navController,viewModel)
+                                ProfileScreen(navController, viewModel)
                             }
 
                             composable(route = Screen.SplashScreen.route) {
                                 Splash(navController)
                             }
                             composable(route = Screen.LoginScreen.route) {
-                                LoginScreen(navController,viewModel)
+                                LoginScreen(navController, viewModel)
                             }
 
                             composable(route = Screen.RestaurantsScreen.route) {
-                                LoginScreen(navController,viewModel)
+                                RestaurantsScreen(navController, viewModel)
                             }
 
                             composable(route = Screen.NewMyRequestScreen.route) {
-                                LoginScreen(navController,viewModel)
+                                NewRequest(navController, viewModel)
                             }
 
-                            composable(route = Screen.LoginScreen.route) {
-                                LoginScreen(navController,viewModel)
+                            composable(route = Screen.RequestsScreen.route) {
+                                RequestsScreen(navController, viewModel)
                             }
 
+                            composable(route = Screen.OldRequestScreen.route) {
+                                OldRequestScreen(navController, viewModel)
+                            }
 
+                            composable(route = Screen.ChatScreen.route) {
+                                ChatScreen(navController, viewModel)
+                            }
                         }
-
                     }
-
-
                 }
             }
-
         }
     }
 }
@@ -207,12 +269,14 @@ fun MyBottomNavigation(navController: NavController) {
 
 sealed class BottomNavItem(var title: String, var icon: Int, var screenRoute: String) {
     object Restaurants :
-        BottomNavItem("Cart", R.drawable.restaurant, Screen.RestaurantsScreen.route)
+        BottomNavItem("Restaurants", R.drawable.restaurant, Screen.RestaurantsScreen.route)
 
     object Requests :
-        BottomNavItem("requests", R.drawable.pending_requests, Screen.RequestsScreen.route)
+        BottomNavItem("Requests", R.drawable.pending_requests, Screen.RequestsScreen.route)
 
     object Home : BottomNavItem("Home", R.drawable.home, Screen.HomeScreen.route)
-    object AddMyRequest : BottomNavItem("New ", R.drawable.add, Screen.NewMyRequestScreen.route)
+    object AddMyRequest :
+        BottomNavItem("New Request", R.drawable.add, Screen.NewMyRequestScreen.route)
+
     object Profile : BottomNavItem("Profile", R.drawable.person, Screen.ProfileScreen.route)
 }
